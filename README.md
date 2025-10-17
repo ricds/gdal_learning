@@ -2,7 +2,7 @@
 
 # GDAL class for disturbance mapping using satellite monitoring data 
 # Ricardo Dalagnol da Silva (ricds@hotmail.com)
-# www.github.com/ricds/gdal_class/
+# www.github.com/ricds/gdal_learning/
 
 Scripts
 - gdal_class.R : this is the main script of the class
@@ -11,10 +11,15 @@ Scripts
 Activities:
 
 1- cropping raster to extent with gdal_translate
+
 2- cropping vector to extent with ogr2ogr
+
 3- Filtering with gdal_calc : Create PRODES deforestation year 
+
 4- Rasterization with gdal_rasterize : Rasterize DETER to PRODES grid
+
 5- Overlap analysis with gdal_calc : Combine DETER+PRODES
+
 6- Statistics of the overlap analysis
 
 GDAL Functions used:
