@@ -1,6 +1,6 @@
 # GDAL class for disturbance mapping using satellite monitoring data --------------------------------------------------------------
 # Ricardo Dalagnol da Silva (ricds@hotmail.com)
-# www.github.com/ricds/gdal_class/
+# www.github.com/ricds/gdal_learning/
 
 # libraries
 library(sf)
@@ -12,6 +12,7 @@ library(raster)
 ## download miniconda3
 ## open the anaconda prompt terminal, and type in :
 # conda create -n gdal_py36 python=3.6.3
+# conda env list
 # activate gdal_py36
 # conda install -c conda-forge gdal
 ## in Windows, to add this version of gdal to environmental variables - may not be needed if we use the whole path when calling functions
