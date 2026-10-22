@@ -1,0 +1,6 @@
+# class data downloaded by setup_environment.R and outputs of the exercises
+data/
+class_analysis/
+.Rhistory
+.RData
+.Rproj.user/

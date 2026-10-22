@@ -2,61 +2,17 @@
 # Ricardo Dalagnol da Silva (ricds@hotmail.com)
 # www.github.com/ricds/gdal_learning/
 
-# libraries
-library(sf)
-library(raster)
+# setup - installs what is missing (only the first time, ~10 min), finds GDAL, defines the folders and downloads the data
+## in RStudio the working directory is set to the folder of this script, so no paths need to be changed
+if (!requireNamespace("rstudioapi", quietly = T)) install.packages("rstudioapi")
+if (rstudioapi::isAvailable()) setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+source("setup_environment.R")
 
 
-# conda config ------------------------------------------------------
-
-## download miniconda3
-## open the anaconda prompt terminal, and type in :
-# conda create -n gdal_py36 python=3.6.3
-# conda env list
-# activate gdal_py36
-# conda install -c conda-forge gdal
-## in Windows, to add this version of gdal to environmental variables - may not be needed if we use the whole path when calling functions
-# Win+R --> control sysdm.cpl --> environmental variables --> System variables (bottom) --> add to Path the environment folder e.g. C:\ProgramData\Miniconda3\envs\gdal_py36\
-## check if the environment is installed, gdal_py36 should be listed there
-# conda env list
-## get the folder besides gdal_py36 and assign to the objects below, find the other directories, should follow the same file structure though
-## these are the locations where the gdal functions were installed, you can check there all the functions that 
-gdal_path = "C:\\ProgramData\\miniconda3\\envs\\gdal_py36\\Library\\bin\\"
-py_path = "C:\\ProgramData\\miniconda3\\envs\\gdal_py36\\"
-gdal_py_path = "C:\\ProgramData\\miniconda3\\envs\\gdal_py36\\Scripts\\"
-
-# define functions to simplify the usage
-gdalinfo = shQuote(shortPathName(normalizePath(file.path(gdal_path, "gdalinfo.exe"))))
-gdaladdo = shQuote(shortPathName(normalizePath(file.path(gdal_path, "gdaladdo.exe"))))
-gdalbuildvrt = shQuote(shortPathName(normalizePath(file.path(gdal_path, "gdalbuildvrt.exe"))))
-gdal_translate = shQuote(shortPathName(normalizePath(file.path(gdal_path, "gdal_translate.exe"))))
-gdalwarp = shQuote(shortPathName(normalizePath(file.path(gdal_path, "gdalwarp.exe"))))
-gdal_retile = paste(paste0(py_path,"python"), paste0(gdal_py_path, "gdal_retile.py"))
-gdal_calc = paste(paste0(py_path,"python"), paste0(gdal_py_path, "gdal_calc.py"))
-gdaldem = shQuote(shortPathName(normalizePath(file.path(gdal_path, "gdaldem.exe"))))
-gdal_rasterize = shQuote(shortPathName(normalizePath(file.path(gdal_path, "gdal_rasterize.exe"))))
-gdal_proximity = paste(paste0(py_path,"python"), paste0(gdal_py_path, "gdal_proximity.py"))
-gdal_sieve = paste(paste0(py_path,"python"), paste0(gdal_py_path, "gdal_sieve.py"))
-ogr2ogr = shQuote(shortPathName(normalizePath(file.path(gdal_path, "ogr2ogr.exe"))))
-
-
-# define directories ------------------------------------------------------
-
-# define the repository directory
-repository_dir = "D:/Meus_Documentos/GitHub/gdal_class/"
-
-# define the project directory, where files will be saved during the exercises
-project_dir = "D:/class_analysis/"
-dir.create(project_dir, showWarnings = F)
-
-
-
-# define paths to the datasets within the repository - do not need to change this ------------------------------------------
-
-# paths to data
-test_aoi2 = paste0(repository_dir, "test_aoi2.gpkg")
-prodes2024 = paste0(repository_dir, "prodes2024_crop_aoi1.tif")
-deter2024 = paste0(repository_dir, "deter2024_crop_aoi1.gpkg")
+# paths to the datasets within the repository - do not need to change this
+test_aoi2 = file.path(repository_dir, "test_aoi2.gpkg")
+prodes2024 = file.path(repository_dir, "prodes2024_crop_aoi1.tif")
+deter2024 = file.path(repository_dir, "deter2024_crop_aoi1.gpkg")
 
 ## First start by visualizing these data and aoi in QGIS
 ## DETER was already filtered to remove Deforestation alerts, only Degradation alerts remain
@@ -67,39 +23,40 @@ deter2024 = paste0(repository_dir, "deter2024_crop_aoi1.gpkg")
 # @@@ 1- cropping raster to extent with gdal_translate ----------------------------------------------------------------
 
 # define extent based on the vector aoi2
-aoi = st_read(test_aoi2)
-new_ext = extent(aoi)
+aoi = vect(test_aoi2)
+new_ext = ext(aoi)
 
 # crop prodes2024 to aoi2
-prodes2024_crop_aoi2 = paste0(project_dir, "prodes2024_crop_aoi2.tif")
+prodes2024_crop_aoi2 = file.path(project_dir, "prodes2024_crop_aoi2.tif")
 gdal_translate_run = paste(gdal_translate,
-                           "-projwin", new_ext@xmin, new_ext@ymax, new_ext@xmax, new_ext@ymin,
+                           "-projwin", xmin(new_ext), ymax(new_ext), xmax(new_ext), ymin(new_ext),
                            "-co COMPRESS=DEFLATE -co PREDICTOR=2 --config GDAL_CACHEMAX 75",
-                           prodes2024,
-                           prodes2024_crop_aoi2
+                           shQuote(prodes2024),
+                           shQuote(prodes2024_crop_aoi2)
 )
 print(gdal_translate_run)
 system(gdal_translate_run)
 
 ## visualize in QGIS
-
+## Quick plot here
+# plot(rast(prodes2024_crop_aoi2))
 
 
 
 # @@@ 2- cropping vector to extent with ogr2ogr -----------------------------------------------------
 
 # define extent based on the vector aoi2
-aoi = st_read(test_aoi2)
-new_ext = extent(aoi)
+aoi = vect(test_aoi2)
+new_ext = ext(aoi)
 
 # crop deter2024 to aoi2 using ogr2ogr
-deter2024_crop_aoi2 <- paste0(project_dir, "deter2024_crop_aoi2.gpkg")
+deter2024_crop_aoi2 <- file.path(project_dir, "deter2024_crop_aoi2.gpkg")
 ogr2ogr_run <- paste(
   ogr2ogr,                                       # path to ogr2ogr binary
   "-f GPKG",                                     # output format
-  deter2024_crop_aoi2,                          # output file
-  deter2024,                                    # input file
-  "-clipsrc", new_ext@xmin, new_ext@ymin, new_ext@xmax, new_ext@ymax,  # clip extent (xmin ymin xmax ymax)
+  shQuote(deter2024_crop_aoi2),                 # output file
+  shQuote(deter2024),                           # input file
+  "-clipsrc", xmin(new_ext), ymin(new_ext), xmax(new_ext), ymax(new_ext),  # clip extent (xmin ymin xmax ymax)
   "-nlt PROMOTE_TO_MULTI",                       # ensure geometry consistency
   "-nln deter2024_crop_aoi1",                   # output layer name
   "--config OGR_GPKG_FOREIGN_KEY_CHECK OFF"      # optional: speed-up for GPKG
@@ -107,66 +64,69 @@ ogr2ogr_run <- paste(
 print(ogr2ogr_run)
 system(ogr2ogr_run)
 
-## visualize in QGIS
 ## more operations and parameters here https://gdal.org/en/stable/programs/ogr2ogr.html#ogr2ogr
 
+## visualize in QGIS
+## quick plot here
+# plot(vect(deter2024_crop_aoi2))
 
 
 # @@@ 3- Filtering with gdal_calc : Create PRODES deforestation year --------
 
 # define the operations we will be doing
 calc_str = paste("--calc \" numpy.where(A==7, 1990,
-                           numpy.where(logical_and(A>=8,A<=49), A + 2000,
-                           numpy.where(logical_and(A>=50,A<=90), A - 40 + 2000,
+                           numpy.where(logical_and(A>=8,A<=49), A.astype(numpy.uint16) + 2000,
+                           numpy.where(logical_and(A>=50,A<=90), A.astype(numpy.uint16) - 40 + 2000,
                            numpy.where(A==100, 1, 0)))) \"")
 ## Remaining Forest will be == 1
+## PRODES is Byte (0-255), so A + 2000 does not fit : A.astype(numpy.uint16) first converts A to UInt16 (0-65535)
 
 # calc
-prodes_year = paste0(project_dir, "prodes_year.tif")
+prodes_year = file.path(project_dir, "prodes_year.tif")
 gdal_calc_run = paste(gdal_calc,
                       calc_str,
                       "--format GTiff --type UInt16",
                       "--co COMPRESS=DEFLATE",
-                      "-A",prodes2024_crop_aoi2,
+                      "-A",shQuote(prodes2024_crop_aoi2),
                       #"--quiet",
                       "--overwrite",
-                      "--outfile", prodes_year
+                      "--outfile", shQuote(prodes_year)
 )
 print(gdal_calc_run)
 system(gdal_calc_run)
+# plot(rast(prodes_year))
 
 ## Visualize in QGIS, now we have PRODES year e.g. 2020, value 1 for forest, or 0 for rest
 ## exercise : if i wanted to get only prodes deforestation binary, how would one achieve that with gdal_calc ?
 
 
 
-
 # @@@ 4- Rasterization with gdal_rasterize : Rasterize DETER to PRODES grid --------
 
 # rasterize binary degradation
-new_ext = extent(raster(prodes_year))
-tr1 = res(raster(prodes_year))[1]
+new_ext = ext(rast(prodes_year))
+tr1 = res(rast(prodes_year))[1]
 tr = paste("-tr", tr1, tr1)
-deter_binary = paste0(project_dir, "deter_binary.tif")
+deter_binary = file.path(project_dir, "deter_binary.tif")
 gdal_rasterize_run = paste(gdal_rasterize,
                            "-burn 1",
-                           "-te", new_ext@xmin, new_ext@ymin, new_ext@xmax, new_ext@ymax,
+                           "-te", xmin(new_ext), ymin(new_ext), xmax(new_ext), ymax(new_ext),
                            tr,
                            "-ot Byte", # 0-255
+                           "-init 0 -a_nodata 255", # pixels start as 0 = no degradation, otherwise gdal_rasterize marks 0 as nodata
                            "-co COMPRESS=DEFLATE",
-                           deter2024,
-                           deter_binary
+                           shQuote(deter2024),
+                           shQuote(deter_binary)
 )
 print(gdal_rasterize_run)
 system(gdal_rasterize_run)
-# plot(raster(deter_i_binary))
-# plot(raster(prodes_i_binary))
+# plot(rast(deter_binary))
+# plot(rast(prodes_year))
 
 ## Visualize in QGIS
 ## note the two rasters have same dimension and extent - they are ready for analysis
 ## if you filter DETER for specific degradation, you can create different rasters for each degradation type
 ## more operations and parameters here https://gdal.org/en/stable/programs/gdal_rasterize.html#gdal-rasterize
-
 
 
 
@@ -182,38 +142,40 @@ system(gdal_rasterize_run)
 ## since prodes does not have numbers bigger than 10000, lets make deter 0,10000, then sum both and voila!
 
 # multiply deter by 10000 so its either 0 or 10000
-calc_str = paste("--calc \" A*10000 \"")
-deter_binary10000 = paste0(project_dir, "deter_binary10000.tif")
+calc_str = paste("--calc \" A.astype(numpy.uint16)*10000 \"") # deter is Byte (0-255), convert to UInt16 so 10000 fits
+deter_binary10000 = file.path(project_dir, "deter_binary10000.tif")
 gdal_calc_run = paste(gdal_calc,
                       calc_str,
                       "--format GTiff --type UInt16",
                       "--co COMPRESS=DEFLATE",
-                      "-A",deter_binary,
+                      "-A",shQuote(deter_binary),
                       #"--quiet",
                       "--overwrite",
-                      "--outfile", deter_binary10000
+                      "--outfile", shQuote(deter_binary10000)
 )
 print(gdal_calc_run)
 system(gdal_calc_run)
+# plot(rast(deter_binary10000))
 
 ## Always visualize/validate results before going deep into analysis.
 
 
 # sum prodes and deter
 calc_str = paste("--calc \" A+B \"")
-overlap_prodes_deter = paste0(project_dir, "overlap_prodes_deter.tif")
+overlap_prodes_deter = file.path(project_dir, "overlap_prodes_deter.tif")
 gdal_calc_run = paste(gdal_calc,
                       calc_str,
                       "--format GTiff --type UInt16",
                       "--co COMPRESS=DEFLATE",
-                      "-A",prodes_year,
-                      "-B",deter_binary10000,
+                      "-A",shQuote(prodes_year),
+                      "-B",shQuote(deter_binary10000),
                       #"--quiet",
                       "--overwrite",
-                      "--outfile", overlap_prodes_deter
+                      "--outfile", shQuote(overlap_prodes_deter)
 )
 print(gdal_calc_run)
 system(gdal_calc_run)
+# plot(rast(overlap_prodes_deter))
 
 ## Visualize in QGIS see all the different numbers
 ## more operations and parameters here https://gdal.org/en/stable/programs/gdal_calc.html#gdal-calc
@@ -222,8 +184,8 @@ system(gdal_calc_run)
 # @@@ 6- Statistics of the overlap analysis --------------------------------------
 
 # lets do a simple analysis now, get the table frequency of values
-r = raster(overlap_prodes_deter)
-r_table = table(r[])
+r = rast(overlap_prodes_deter)
+r_table = table(values(r))
 print(r_table)
 
 # calculate relative frequency
